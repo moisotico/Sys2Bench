@@ -329,7 +329,8 @@ Distributed under the Apache-2.0 License. See `LICENSE` for more information.
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-We acknowledge that this repository builds upon prior work from [maitrix-org/llm-reasoners](https://github.com/maitrix-org/llm-reasoners) and [karthikv792/LLMs-Planning](https://github.com/karthikv792/LLMs-Planning). We also acknowledge [Awesome ReadMe Template](https://github.com/othneildrew/Best-README-Template/tree/main) for the simple readme template design.
+This work, supported in part by the **National Institutes of Health** under grant **U01AG070112** and the **National Science Foundation** under grant **CNS-2328395**. We acknowledge previous contributions from [maitrix-org/llm-reasoners](https://github.com/maitrix-org/llm-reasoners) and [karthikv792/LLMs-Planning](https://github.com/karthikv792/LLMs-Planning). 
+Additionally, we appreciate the [Awesome ReadMe Template](https://github.com/othneildrew/Best-README-Template/tree/main) for providing a clean and structured README design.
 
 ## Citation
 
