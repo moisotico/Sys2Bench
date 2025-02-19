@@ -337,6 +337,17 @@ We also acknowledge previous contributions from [maitrix-org/llm-reasoners](http
 
 If you found our work useful, please considering citing our preprint - "Inference-Time Computations for LLM Reasoning and Planning: A Benchmark and Insights"
 
+```
+@misc{parashar2025inferencetimecomputationsllmreasoning,
+      title={Inference-Time Computations for LLM Reasoning and Planning: A Benchmark and Insights}, 
+      author={Shubham Parashar and Blake Olson and Sambhav Khurana and Eric Li and Hongyi Ling and James Caverlee and Shuiwang Ji},
+      year={2025},
+      eprint={2502.12521},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2502.12521}, 
+}
+```
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [contributors-shield]: https://img.shields.io/github/contributors/divelab/sys2bench.svg?style=for-the-badge
