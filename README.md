@@ -338,7 +338,7 @@ We also acknowledge previous contributions from [maitrix-org/llm-reasoners](http
 If you found our work useful, please considering citing our preprint - "Inference-Time Computations for LLM Reasoning and Planning: A Benchmark and Insights"
 
 ```
-@misc{parashar2025inferencetimecomputationsllmreasoning,
+@misc{2025Sys2benchLLMreasoning,
       title={Inference-Time Computations for LLM Reasoning and Planning: A Benchmark and Insights}, 
       author={Shubham Parashar and Blake Olson and Sambhav Khurana and Eric Li and Hongyi Ling and James Caverlee and Shuiwang Ji},
       year={2025},
