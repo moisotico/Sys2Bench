@@ -2,6 +2,7 @@
 
 set -e
 
+unzip ./LLMs_Planning.zip
 PLANNER_DIR="./LLMs-Planning/planner_tools"
 
 # Check for VAL directory
