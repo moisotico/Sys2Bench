@@ -128,6 +128,5 @@ if __name__ == "__main__":
             **kwargs,
         )
 
-    # for exllama use please refer to https://github.com/turboderp/exllama and put it under /llm-reasoners/
 
     fire.Fire(main)  # user will need to switch the model in the code
