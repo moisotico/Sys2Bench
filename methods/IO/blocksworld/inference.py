@@ -2,7 +2,7 @@ import sys
 import os
 import re
 # Add the directory to the Python path
-from reasoners.lm import ExLlamaModel, HFModel
+from reasoners.lm import HFModel
 from datetime import datetime
 import json
 from reasoners.benchmark import BWEvaluator
@@ -10,7 +10,6 @@ import fire
 from reasoners.lm.openai_model import OpenAIModel
 from reasoners.lm.gemini_model import BardCompletionModel
 from reasoners.lm.anthropic_model import ClaudeModel
-from reasoners.lm import  Llama2Model, Llama3Model
 from reasoners.lm.llama_api_model import LLaMaApiModel
 def sc_output_extractor(algo_output):
     from collections import Counter

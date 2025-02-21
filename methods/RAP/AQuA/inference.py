@@ -165,7 +165,6 @@ if __name__ == '__main__':
     import fire
 
     def main(
-        # base_lm: Literal[ 'llama2',' exllama', 'llama3']  = 'exllama',
         model_dir = '/path/to/model',
         llama_size = None,
         lora_dir = None,
