@@ -43,5 +43,6 @@ reasoners/visualization/__pycache__/visualizer_client.cpython-310.pyc
 reasoners/benchmark/__pycache__/__init__.cpython-310.pyc
 models/
 planner_tools/
+*.log
 logs/*
 LLMs-Planning/
