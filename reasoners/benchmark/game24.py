@@ -3,13 +3,13 @@ from reasoners import Evaluator
 import pandas as pd
 import re
 
-def read_data(data_path="data/game24/24.csv"):
+def read_data():
     """
     file: a csv file (fixed)
     """
-    if data_path is None:
-        data_path = "data/game24/24.csv"
-    data = list(pd.read_csv(data_path)["Puzzles"])[900:1000]
+    # path = os.path.join('prompts', file)
+    dataset_path = "data/game24/24.csv"
+    data = list(pd.read_csv(dataset_path)["Puzzles"])[900:1000]
     return data
 
 def input_processor_debug(x):
@@ -31,7 +31,6 @@ class Game24Evaluator(Evaluator):
         sample_prompt_type="l2m",
         test_at_n=1,
         heuristic_search=False,
-        data_path=None
     ) -> None:
         super().__init__()
         self.parsed_plan = None
@@ -39,7 +38,7 @@ class Game24Evaluator(Evaluator):
         self.answer_extractor = answer_extractor
         self.disable_log = disable_log
         self.disable_tqdm = disable_tqdm
-        self.full_dataset = read_data(data_path=data_path)
+        self.full_dataset = read_data()
         self.sample_prompt_type = sample_prompt_type
         self._dataset_name = "game24"
         self.input_processor = input_processor
@@ -53,11 +52,7 @@ class Game24Evaluator(Evaluator):
         if sample_prompt_type == "cot" or sample_prompt_type == "o1":
             prompt[sample_prompt_type] = self.prompt[f'{sample_prompt_type}_prompt']
             # self.prompt[f'{sample_prompt_type}_prompt'] = standard_prompt
-        elif sample_prompt_type == "beamstar":
-            prompt['action_prompt'] = self.prompt['action_prompt_autohd']
-            prompt['output_prompt'] = self.prompt['output_prompt']
-            
-        elif sample_prompt_type == "rap" or sample_prompt_type == "tot":
+        elif sample_prompt_type == "rap" or sample_prompt_type == "tot" or sample_prompt_type == "beamstar":
             return None
         else:
             return NotImplementedError

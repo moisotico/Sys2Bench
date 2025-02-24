@@ -3,4 +3,3 @@ from .mcts import MCTS, MCTSNode, MCTSResult, MCTSAggregation
 from .dfs import DFS, DFSNode, DFSResult
 from .greedy import GreedySearch, GreedySearchNode, GreedySearchResult
 from .random import RandomShooting
-from .astar_bfs import BeamStar, BeamSearchNode, BeamSearchResult
