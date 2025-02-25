@@ -1,4 +1,4 @@
-from reasoners.algorithm import BeamSearchResult
+from reasoners.algorithm import HeuristicGuidedSearchResult
 from world_model import Game24State
 import re
 from itertools import permutations, product
@@ -12,7 +12,7 @@ def timeout_handler(signum, frame):
     """Handler to raise an exception on timeout."""
     raise TimeoutException("Function execution timed out")
 
-def parse_result(result: list[BeamSearchResult]):
+def parse_result(result: list[HeuristicGuidedSearchResult]):
     expressions = []
     for terminal_state in result:
         game24State: Game24State = terminal_state.terminal_state

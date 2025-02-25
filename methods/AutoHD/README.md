@@ -32,7 +32,7 @@
 
   <h3 align="center">Complex LLM Planning via Automated Heuristics Discovery</h3>
 
-  <img src="../../assets/AutoHD.png" height="200">
+  <img src="../../assets/AutoHD.png" height="300">
 
 </div>
 
@@ -74,7 +74,31 @@ Please follow the instructions of Sys2Bench to set up the environment and start 
 
 ### Running Blocksworld
 
+To run AutoHD with the heuristic evolution process, please use the following command:
+
+```sh
+python methods/AutoHD/blocksworld/heuristic_search.py --temperature 0.8 --base_lm openai --openai_model gpt-4o-mini
+```
+If you only want to perform heuristic-guided inference-time search, run:
+
+```sh
+python methods/AutoHD/blocksworld/inference.py --heuristic_log_file methods/AutoHD/blocksworld/bw_HeuristicSearch-4o-mini.log --temperature 0.8 --base_lm openai --openai_model gpt-4o-mini
+```
+Additionally, we provide a script for convenience: `methods/AutoHD/blocksworld/autohd.sh`. 
+
 ### Running Game of 24
+
+To run AutoHD with the heuristic evolution process, please use the following command:
+
+```sh
+python methods/AutoHD/game24/heuristic_search.py --temperature 0.8 --base_lm openai --openai_model gpt-4o-mini
+```
+If you only want to perform heuristic-guided inference-time search, run:
+
+```sh
+python methods/AutoHD/game24/inference.py --heuristic_log_file methods/AutoHD/game24/gam24_HeuristicSearch_5gen-openai-gpt4o-mini.log --temperature 0.8 --base_lm openai --openai_model gpt-4o-mini
+```
+Additionally, we provide a script for convenience: `methods/AutoHD/game24/autohd.sh`. 
 
 ### Running Rubik's Cube
 

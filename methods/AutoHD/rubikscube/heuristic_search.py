@@ -4,7 +4,7 @@ from reasoners.lm.openai_model import OpenAIModel
 from reasoners.lm.llama_api_model import LLaMaApiModel
 import random
 import re
-from inference import search_cube
+from inference import autohd_search
 import heapq
 from typing import Literal
 import fire
@@ -155,9 +155,8 @@ class HeuristicSearch:
         best_item = max(self.best_heuristics[self.max_generations - 1], key=lambda x: x[0])
         best_heuristic_obj = best_item[2]
         
-        accuracy = search_cube(self.base_model,
+        accuracy = autohd_search(self.base_model,
                     prompt,
-                    search_algo='beamstar',
                     disable_log=disable_log,
                     data_path=self.test_file_path,
                     depth_limit=depth_limit,
@@ -185,9 +184,8 @@ class HeuristicSearch:
         best_item = max(all_items, key=lambda x: x[0])
         # Extract the heuristic_obj
         best_heuristic_obj = best_item[2]
-        accuracy = search_cube(self.base_model,
+        accuracy = autohd_search(self.base_model,
                     prompt,
-                    search_algo='beamstar',
                     disable_log=disable_log,
                     data_path=self.test_file_path,
                     depth_limit=depth_limit,
@@ -220,9 +218,8 @@ class HeuristicSearch:
         
         for i, heuristic_obj in enumerate(self.heuristic_functions[self.generation]):
             print(f"GEN: {self.generation}, Heuristic Number: {i},  HEURISTIC:  {str(heuristic_obj['function_text'])} ", flush=True)
-            fitness_score = search_cube(self.base_model,
+            fitness_score = autohd_search(self.base_model,
                     prompt,
-                    search_algo='beamstar',
                     disable_log=disable_log,
                     data_path=self.val_file_path,
                     depth_limit=depth_limit,

@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from reasoners import LanguageModel, Reasoner
 from reasoners import LanguageModel 
-from reasoners.algorithm import BeamStar
+from reasoners.algorithm import HeuristicGuidedSearch
 from reasoners.lm.openai_model import OpenAIModel
 from reasoners.lm.llama_api_model import LLaMaApiModel
 
@@ -32,9 +32,8 @@ def load_heuristic_fn(log_content, heuristic_fn_type: Literal['best', 'last'] = 
     heuristic_fn = create_callable_function(extracted_code)
     return heuristic_fn
 
-def search_cube(base_model: LanguageModel,
+def autohd_search(base_model: LanguageModel,
            prompt: dict,
-           search_algo: str = "beamstar",
            data_path: str = './data/cube_test.csv',
            resume: int = 0,
            depth_limit: int = 6,
@@ -46,10 +45,7 @@ def search_cube(base_model: LanguageModel,
            beam_size = 10,
            **search_algo_params):
 
-    if search_algo == "beamstar":
-        search_algo_params |= {"max_depth": depth_limit}
-    else:
-        raise NotImplementedError
+    search_algo_params |= {"max_depth": depth_limit}
     
     if heuristic_fn is not None:
         log_dir = f'logs/Heuristic_search/rubikscube/{datetime.now().strftime("%m%d%Y-%H%M%S")}'
@@ -57,10 +53,7 @@ def search_cube(base_model: LanguageModel,
     world_model = CubeWorldModel(base_model=base_model, prompt=prompt, max_steps=depth_limit)
     config = CubeConfig(base_model=base_model, prompt=prompt, temperature=temperature, heuristic_fn=heuristic_fn)
     
-    if search_algo == "beamstar":
-        search_algo = BeamStar(beam_size = beam_size, add_cost = add_cost, **search_algo_params)
-    else:
-        raise NotImplementedError
+    search_algo = HeuristicGuidedSearch(beam_size = beam_size, add_cost = add_cost, **search_algo_params)
     
     reasoner = Reasoner(world_model=world_model, search_config=config, search_algo=search_algo)
     evaluator = CubeEvaluator(data_path=data_path, init_prompt=prompt, disable_log=disable_log)
@@ -75,7 +68,6 @@ def main(
         disable_log: bool = False,
         depth_limit: int = 5,
         temperature = 1.0,
-        search_algo = "beamstar",
         action_prompt = False,
         n_iter: int = 3,
         beam_size = 10,
@@ -111,9 +103,8 @@ def main(
             heuristic_log = f.read()
         heuristic_fn = load_heuristic_fn(heuristic_log)
 
-    search_cube(base_model,
+    autohd_search(base_model,
             prompt,
-            search_algo=search_algo,
             disable_log=disable_log,
             data_path=data_path,
             depth_limit=depth_limit,

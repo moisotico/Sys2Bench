@@ -3,7 +3,7 @@ from typing import Type, Callable, Optional, Literal
 import numpy as np
 from reasoners import LanguageModel, Reasoner
 from reasoners.benchmark import BWEvaluator
-from reasoners.algorithm import BeamStar
+from reasoners.algorithm import HeuristicGuidedSearch
 from reasoners.lm import  HFModel, OpenAIModel, LLaMaApiModel
 from world_model import BlocksWorldModel, BWState, BWAction
 from search_config import BWConfig
@@ -59,7 +59,7 @@ def autohd_search(base_model: LanguageModel,
     world_model = BlocksWorldModel(base_model=base_model, prompt=prompt, max_steps=depth_limit)
     config = BWConfig(base_model=base_model, prompt=prompt, temperature=temperature, step_into_state=step_into_state, action_prompt = action_prompt, heuristic_fn=heuristic_fn)
     
-    search_algo = BeamStar(add_cost=False, **search_algo_params)
+    search_algo = HeuristicGuidedSearch(add_cost=False, **search_algo_params)
     
     reasoner = Reasoner(world_model=world_model, search_config=config, search_algo=search_algo)
     evaluator = BWEvaluator(config_file=config_file, 
@@ -84,7 +84,7 @@ def main(
             step_into_state = True,
             action_prompt = True,
             n_steps: int = 2,
-            n_iters:int = 1, 
+            n_iters:int = 10, 
             api_model_id = 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
             openai_model = 'gpt-4o-mini',
             heuristic_log_file = None,

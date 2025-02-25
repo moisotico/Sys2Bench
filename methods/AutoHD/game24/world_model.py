@@ -1,6 +1,6 @@
 from typing import List, Dict, Tuple, NamedTuple, Any
 from reasoners import WorldModel, LanguageModel
-from reasoners.algorithm import BeamSearchNode
+from reasoners.algorithm import HeuristicGuidedSearchNode
 import re
 from collections import Counter
 
@@ -71,7 +71,7 @@ class Game24WorldModel(WorldModel):
         new_state.path = state.path + '\n' + action.raw_action
         return new_state, None
     
-    def is_terminal(self, node: BeamSearchNode) -> bool: # Figure out depth_limit
+    def is_terminal(self, node: HeuristicGuidedSearchNode) -> bool: # Figure out depth_limit
         # If heuristic evaluates to 0, and we only have one number left, we could be at a goal.
         state: Game24State = node.state
         heuristic_val = node.reward  
