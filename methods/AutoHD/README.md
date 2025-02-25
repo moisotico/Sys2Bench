@@ -32,6 +32,8 @@
 
   <h3 align="center">Complex LLM Planning via Automated Heuristics Discovery</h3>
 
+  <img src="../../assets/AutoHD.png" height="200">
+
 </div>
 
 
