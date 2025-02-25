@@ -1,5 +1,6 @@
 from reasoners import LanguageModel, SearchConfig
 from world_model import BWState, BWAction
+from utils import make_actions
 class BWConfig(SearchConfig):
     def __init__(self,
                  base_model: LanguageModel,
@@ -8,7 +9,8 @@ class BWConfig(SearchConfig):
                  step_into_state: bool = True,
                  action_prompt: bool = True,
                  heuristic_fn: callable = None,
-                 n_candidate: int = 15) -> None:
+                 n_candidate: int = 15,
+                 heuristic_search_type: str = 'test') -> None:
         super().__init__()
         self.base_model = base_model
         self.example = None
@@ -18,10 +20,11 @@ class BWConfig(SearchConfig):
         self.step_into_state = step_into_state
         self.action_prompt = action_prompt
         self.heuristic_fn = heuristic_fn
+        self.search_type = heuristic_search_type
         self.prompt_cache = {}
 
     def get_actions(self, state: BWState) -> list[BWAction]:
-
+        
         if self.action_prompt:
             if "the hand is empty" in state.blocks_state:
                 prompts = self.prompt["next_actions_empty"].replace("<init_state>", state.blocks_state) 
@@ -29,7 +32,10 @@ class BWConfig(SearchConfig):
                 prompts = self.prompt["next_actions_holding"].replace("<init_state>", state.blocks_state) 
 
         else:
-            assert False
+            actions = make_actions(state.blocks_state)
+            print("UNIQUE ACTIONS:  ", actions)
+            print("-------------------------------")
+            return actions
             
         if prompts in self.prompt_cache:
             ouputs = self.prompt_cache[prompts]

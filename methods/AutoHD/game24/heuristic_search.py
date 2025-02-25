@@ -1,6 +1,6 @@
 import json
 from reasoners.lm.openai_model import OpenAIModel
-from inference import beamstar_plan
+from inference import autohd_search
 from typing import Literal
 import fire
 import heapq
@@ -155,7 +155,7 @@ class HeuristicSearch:
         best_item = max(self.best_heuristics[self.max_generations - 1], key=lambda x: x[0])
         best_heuristic_obj = best_item[2]
         
-        accuracy = beamstar_plan(
+        accuracy = autohd_search(
           beam_size=5,
           base_model=self.base_model,
           prompt=prompt,
@@ -188,7 +188,7 @@ class HeuristicSearch:
         best_item = max(all_items, key=lambda x: x[0])
         # Extract the heuristic_obj
         best_heuristic_obj = best_item[2]
-        accuracy = beamstar_plan(
+        accuracy = autohd_search(
             beam_size=5,
             base_model=self.base_model,
             prompt=prompt,
@@ -224,7 +224,7 @@ class HeuristicSearch:
     best_index = -1
     for i, heuristic_obj in enumerate(self.heuristic_functions[self.generation]):
       print(f"GEN: {self.generation}, Heuristic Number: {i},  HEURISTIC:  {str(heuristic_obj['function_text'])} ", flush=True)
-      fitness_score = beamstar_plan(
+      fitness_score = autohd_search(
           beam_size=5,
           base_model=self.base_model,
           prompt=prompt,

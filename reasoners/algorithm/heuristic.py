@@ -11,7 +11,7 @@ import heapq
 
 # from heuristics import bw_heuristic
 
-class BeamSearchNode:
+class HeuristicGuidedSearchNode:
     id_iter = itertools.count()
 
     @classmethod
@@ -22,11 +22,11 @@ class BeamSearchNode:
                  state: State,
                  action: Action,
                  reward: float,
-                 parent: Optional['BeamSearchNode'] = None,
-                 children: Optional[List['BeamSearchNode']] = None,
+                 parent: Optional['HeuristicGuidedSearchNode'] = None,
+                 children: Optional[List['HeuristicGuidedSearchNode']] = None,
                  heuristic = None
                  ) -> None:
-        self.id = next(BeamSearchNode.id_iter)
+        self.id = next(HeuristicGuidedSearchNode.id_iter)
         self.state = state
         self.action = action
         self.reward = reward
@@ -34,7 +34,7 @@ class BeamSearchNode:
         self.children = children if children is not None else []
         self.heuristic = heuristic
 
-    def add_child(self, child: 'BeamSearchNode'):
+    def add_child(self, child: 'HeuristicGuidedSearchNode'):
         self.children.append(child)
 
     def get_trace(self) -> List[Tuple[Action, State, float]]:
@@ -51,22 +51,22 @@ class BeamSearchNode:
         return self.reward < other.reward
 
 
-class BeamSearchResult(NamedTuple):
-    terminal_node: BeamSearchNode
+class HeuristicGuidedSearchResult(NamedTuple):
+    terminal_node: HeuristicGuidedSearchNode
     terminal_state: State
     cum_reward: float
-    tree: BeamSearchNode
+    tree: HeuristicGuidedSearchNode
     trace: List[Tuple[Action, State, float]]
 
 
-class BeamStar(SearchAlgorithm, Generic[State, Action]):
+class HeuristicGuidedSearch(SearchAlgorithm, Generic[State, Action]):
     def __init__(self, max_depth: int, sampling_strategy: str = 'argmax',
                  replace: Optional[bool] = None, temperature: Optional[float] = None,
                  temperature_decay: Optional[float] = None, reject_sample: Optional[bool] = None,
                  reject_min_reward: Optional[float] = None, unbiased: Optional[bool] = None,
                  reward_aggregator: Union[Callable[[List[Any]], float], str] = 'last', action_dedup: bool = False,
                  early_terminate: bool = True, return_beam: bool = False, call_old = False, n_iters=1, terminal_beam_size=1, add_cost:bool = False, **kwargs) -> None:
-        # Initialize the BeamStar class
+        # Initialize the HeuristicGuidedSearch class
         super().__init__(**kwargs)
         self.max_depth = max_depth
         self.sampling_strategy = sampling_strategy
@@ -134,7 +134,7 @@ class BeamStar(SearchAlgorithm, Generic[State, Action]):
         return self.__call__dfs(world, config)
 
     def __call__dfs(self, world: WorldModel[State, Action, State], config: SearchConfig[State, Action, State]):
-        BeamSearchNode.reset_id()
+        HeuristicGuidedSearchNode.reset_id()
         init_state = world.init_state()
         goal_state = world.goal_state(init_state)
         terminal_beam = []
@@ -143,16 +143,16 @@ class BeamStar(SearchAlgorithm, Generic[State, Action]):
         best_result = None
         if isinstance(init_state, list):
             for i, state in enumerate(init_state):
-                node = BeamSearchNode(state=state, action=None, reward=config.heuristic(state, goal_state))
+                node = HeuristicGuidedSearchNode(state=state, action=None, reward=config.heuristic(state, goal_state))
                 if i==0:
-                    root_node = BeamSearchNode(state=state, action=None, reward=config.heuristic(state, goal_state))
+                    root_node = HeuristicGuidedSearchNode(state=state, action=None, reward=config.heuristic(state, goal_state))
                     
                 # Initialize current beam with initial state
                 heapq.heappush(a_star_heap, (node.reward,[], node))
         else:
-            root_node = BeamSearchNode(state=init_state, action=None, reward=config.heuristic(init_state, goal_state))
+            root_node = HeuristicGuidedSearchNode(state=init_state, action=None, reward=config.heuristic(init_state, goal_state))
             # Initialize current beam with initial state
-            best_result = BeamSearchResult(
+            best_result = HeuristicGuidedSearchResult(
                     terminal_node=root_node,
                     terminal_state=root_node.state,
                     cum_reward=root_node.reward,
@@ -161,7 +161,7 @@ class BeamStar(SearchAlgorithm, Generic[State, Action]):
             )
             heapq.heappush(a_star_heap, (root_node.reward, [], root_node))
         iters = self.max_depth * self.num_iters # State Space Search
-        print(f'Running BeamStar for {iters} search iterations.')
+        print(f'Running HeuristicGuidedSearch for {iters} search iterations.')
         for i in range(iters):
             if not a_star_heap:
                 break
@@ -189,14 +189,14 @@ class BeamStar(SearchAlgorithm, Generic[State, Action]):
                 
                 heuristic = config.heuristic(next_state, goal_state)
                 if self.add_cost:
-                    child_node = BeamSearchNode(state=next_state, action=action, reward=heuristic + state.step_idx + 1, heuristic=heuristic)
+                    child_node = HeuristicGuidedSearchNode(state=next_state, action=action, reward=heuristic + state.step_idx + 1, heuristic=heuristic)
                 else:
-                    child_node = BeamSearchNode(state=next_state, action=action, reward=heuristic, heuristic=heuristic)
+                    child_node = HeuristicGuidedSearchNode(state=next_state, action=action, reward=heuristic, heuristic=heuristic)
                 search_node.add_child(child_node)
                 # If the heauristic evaluates to zero, or the max search has exhausted.
                 if self.early_terminate and world.is_terminal(child_node): 
                     print('Solution Found Adding to Terminal Beam')
-                    terminal_beam.append(BeamSearchResult(
+                    terminal_beam.append(HeuristicGuidedSearchResult(
                         terminal_node=child_node,
                         terminal_state=child_node.state,
                         cum_reward=child_node.reward,

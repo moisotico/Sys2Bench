@@ -11,7 +11,7 @@ from reasoners.lm.llama_api_model import LLaMaApiModel
 from reasoners import LanguageModel, Reasoner
 from reasoners.benchmark import Game24Evaluator
 from utils import parse_result, create_callable_function
-from reasoners.algorithm import BeamSearch, DFS, BeamStar
+from reasoners.algorithm import BeamSearch, DFS, HeuristicGuidedSearch
 from search_config import Game24Config
 from world_model import Game24WorldModel
 
@@ -32,7 +32,7 @@ def load_heuristic_fn(log_content, heuristic_fn_type: Literal['best', 'last'] = 
     heuristic_fn = create_callable_function(extracted_code)
     return heuristic_fn
 
-def beamstar_plan(base_model: LanguageModel,
+def autohd_search(base_model: LanguageModel,
            prompt: dict,
            search_algo: str = "beam",
            data_path: str = 'data',
@@ -73,7 +73,7 @@ def beamstar_plan(base_model: LanguageModel,
     elif search_algo == "beam":
         search_algo = BeamSearch(**search_algo_params)
     elif search_algo == "beamstar":
-        search_algo = BeamStar(**search_algo_params)
+        search_algo = HeuristicGuidedSearch(**search_algo_params)
     else:
         raise NotImplementedError
     
@@ -144,7 +144,7 @@ def main(base_lm:Literal['hf', 'api', 'openai'] = 'openai',
             heuristic_log = f.read()
         heuristic_fn = load_heuristic_fn(heuristic_log)
 
-    beamstar_plan(base_model,
+    autohd_search(base_model,
                prompt,
                search_algo='beamstar',
                disable_log='False',

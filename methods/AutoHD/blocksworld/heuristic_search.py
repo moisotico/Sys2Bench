@@ -1,7 +1,7 @@
 import json
 from reasoners.lm.openai_model import OpenAIModel
 from reasoners.lm import LLaMaApiModel, HFModel
-from Astar_inference import autohd_search
+from inference import autohd_search
 from typing import Sequence, Any, Literal, Optional
 import fire
 import heapq
@@ -13,7 +13,6 @@ from heuristic_search_prompts  import init_prompt, evolution_prompt, types, evol
 from utils import timeout_handler, TimeoutException, create_callable_function
 import re
 
-# variables needed - cities, trip-plan, total_days, current_day, current_city, city_stay_duration, city_visit_windows 
 class HeuristicSearch:
   def __init__(self, base_model, temperature=0.8, init_prompt=init_prompt, evolution_prompt=evolution_prompt, val_file_path=None, max_generations=5, sample_k=3, log_dir = None, test_file_path = None):
     self.base_model = base_model
@@ -70,8 +69,8 @@ class HeuristicSearch:
           if parsed_output is not None:
             heuristic_function_obj = {'description': parsed_output[0], 'function_text': parsed_output[1], 'llm_output': llm_outputs[i]}
             try:
-              self.get_callable_function(heuristic_function_obj)
-              print(f"New Heuristic {i}: ",heuristic_function_obj['function_text'])
+              self.get_callable_function(i, heuristic_function_obj)
+              # print(f"New Heuristic {i}: ",heuristic_function_obj['function_text'])
             except:
               continue
         
@@ -84,7 +83,7 @@ class HeuristicSearch:
     # print(self.heuristic_functions[self.generation],flush=True)
     print("--------================-------------====================== ------------------",flush=True)
     
-  def get_callable_function(self, heuristic_function_obj):
+  def get_callable_function(self, id, heuristic_function_obj):
     code = heuristic_function_obj['function_text']
     heuristic_fn = create_callable_function(code=code)
     
@@ -102,7 +101,11 @@ class HeuristicSearch:
         return
     finally:
         signal.alarm(0)
-    
+        
+    print(f"Generation: {self.generation}, Valid Heuristic {id+1}: \n------------\n", code)
+    heuristic_function_obj['callable_heuristic'] = heuristic_fn
+    self.heuristic_functions[self.generation].append(heuristic_function_obj)
+        
   
   def parse_output(self, output: str):
     # Account for parsing errors.
@@ -145,7 +148,7 @@ class HeuristicSearch:
     
     return prompt
   
-  def test_heuristic(self, prompt, depth_limit=20, temperature=0.8, disable_log='False',lm_plan_file: str = 'lm_plan.tmp', domain_file: str = "examples/CoT/blocksworld/data/generated_domain.pddl", config_file: str = "examples/CoT/blocksworld/data/bw_config.yaml", **kwargs):
+  def test_heuristic(self, prompt, depth_limit=20, temperature=0.8, disable_log='False',lm_plan_file: str = 'lm_plan.tmp', domain_file: str = "data/blocksworld/generated_domain.pddl", config_file: str = "data/blocksworld/bw_config.yaml", **kwargs):
     
     print("Best heuristic in the last generation: ")
     prompt['next_actions_holding'] = get_next_actions_holding(prompt)
@@ -197,7 +200,7 @@ class HeuristicSearch:
     
     
     
-  def validate_heuristic(self, prompt, depth_limit=20, temperature=0.8, disable_log='False',lm_plan_file: str = 'lm_plan.tmp', domain_file: str = "examples/CoT/blocksworld/data/generated_domain.pddl", config_file: str = "examples/CoT/blocksworld/data/bw_config.yaml", **kwargs):
+  def validate_heuristic(self, prompt, depth_limit=20, temperature=0.8, disable_log='False',lm_plan_file: str = 'lm_plan.tmp', domain_file: str = "data/blocksworld/generated_domain.pddl", config_file: str = "data/blocksworld/bw_config.yaml", **kwargs):
 
     best_index = -1
     for i, heuristic_obj in enumerate(self.heuristic_functions[self.generation]):
@@ -205,7 +208,7 @@ class HeuristicSearch:
       prompt['next_actions_empty'] = get_next_actions_empty(prompt)
       print(f"GEN: {self.generation}, Heuristic Number: {i},  HEURISTIC:  {str(heuristic_obj['function_text'])} ", flush=True)
       fitness_score = autohd_search(self.base_model, prompt, 
-                                    disable_log=disable_log, data_path=self.val_file_path, config_file=config_file, domain_file=domain_file, lm_plan_file=lm_plan_file, step_into_state=True, action_prompt=True,
+                                    disable_log=disable_log, data_path=self.val_file_path, config_file=config_file, domain_file=domain_file, lm_plan_file=lm_plan_file, step_into_state=True, action_prompt=False,
                                     depth_limit=depth_limit, temperature=temperature, 
                                     heuristic_fn=heuristic_obj['callable_heuristic'], **kwargs)
       
@@ -232,7 +235,7 @@ class HeuristicSearch:
       self.best_heuristics[self.generation] = []
       print('Starting generation - ', gen)
       self.get_initial_heuristics(sampled_heuristics=sampled_heuristics)
-      best_heuristic_index = self.validate_heuristic(prompt, depth_limit=depth_limit, temperature=temperature, disable_log=disable_log, **kwargs)
+      _ = self.validate_heuristic(prompt, depth_limit=depth_limit, temperature=temperature, disable_log=disable_log, **kwargs)
       pruned_heuristics = self.prune()
       if len(pruned_heuristics) > self.sample_k:
         sampled_heuristics = self.sample_heuristic(pruned_heuristics=pruned_heuristics)
@@ -268,34 +271,36 @@ class HeuristicSearch:
     # Sampled Heuristics
     sampled_heuristics = random.choices(pruned_heuristics, weights=normalized_probabilities, k=self.sample_k)
     return sampled_heuristics
-def main(base_lm:Literal['openai','llamaapi','hf'] = 'openai',
-         data_path=None,
-         test_file_path = None,
-         prompt_path='examples/CoT/blocksworld/prompts/pool_prompt_v1.json',   
+def main(base_lm:Literal['openai','llamaapi'] = 'openai',
+         data_path="data/blocksworld/AutoHD_val_set.json",
+         test_file_path = "data/blocksworld/split_v1/split_v1_step_2_data.json",
+         prompt_path='prompts/blocksworld/pool_prompt_v1.json',   
          temperature=0.8,
          disable_log='False',
-         depth_limit=10,
+         depth_limit=20,
          sc_num=1,
-         log_dir="./examples/A-star/blocksworld/bw_HeuristicSearch_mixValSetV3_depth20_llama3.1_70B.log",
-         api_model_id='meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
-         openai_model_id='gpt-4o',
+         log_dir="logs/blocksworld/bw_HeuristicSearch_{model_name}.log",
+         api_model_id='meta-llama/Meta-Llama-3.1-70B-Instruct',
+         openai_model_id='gpt-4o-mini',
+         max_generations = 5,
+         config_file: str = "data/blocksworld/bw_config.yaml",
+         domain_file: str = "data/blocksworld/generated_domain.pddl",
          **kwargs):
-  # data_path = data_path.format(num_cities=num_cities)
-  # prompt_path = prompt_path.format(num_cities=num_cities)
   
   with open(prompt_path) as f:
       prompt = json.load(f) 
   
   if base_lm == "openai":
     base_model = OpenAIModel(openai_model_id, additional_prompt="CONTINUE")
+    model_name = f'{base_lm}_{openai_model_id}'
   elif base_lm == 'llamaapi':
     base_model = LLaMaApiModel(None, None, use_api=True, model_id=api_model_id, quantized=None, additional_prompt = "CONTINUE")
-  # elif base_lm == "hf":
-  #       base_model = HFModel(None, None, additional_prompt = "CONTINUE")
-  heauristic_search = HeuristicSearch(base_model, val_file_path=data_path, log_dir = log_dir, test_file_path=test_file_path)
-  heauristic_search.evolve(prompt=prompt, depth_limit=depth_limit, temperature=temperature, disable_log=disable_log, **kwargs)
-  heauristic_search.test_heuristic(prompt=prompt, depth_limit=depth_limit, temperature=temperature, disable_log=disable_log, **kwargs)
-
+    model_name = f'{base_lm}_{api_model_id.replace("/", "-")}'
+    
+  log_dir = log_dir.format(model_name=model_name)  
+  heauristic_search = HeuristicSearch(base_model, val_file_path=data_path, log_dir = log_dir, test_file_path=test_file_path, max_generations = max_generations)
+  heauristic_search.evolve(prompt=prompt, depth_limit=depth_limit, temperature=temperature, disable_log=disable_log, domain_file=domain_file, config_file=config_file, **kwargs)
+  heauristic_search.test_heuristic(prompt=prompt, depth_limit=depth_limit, temperature=temperature, disable_log=disable_log, domain_file=domain_file, config_file=config_file, **kwargs)
 
 
 

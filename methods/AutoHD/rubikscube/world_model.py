@@ -1,6 +1,6 @@
 from typing import List, Dict, Tuple, NamedTuple, Any
 from reasoners import WorldModel, LanguageModel
-from reasoners.algorithm import BeamSearchNode
+from reasoners.algorithm import HeuristicGuidedSearchNode
 from utils import *
 import copy
 
@@ -60,7 +60,7 @@ class CubeWorldModel(WorldModel):
         return getCube(doAlgStr(parseCube(cube_state), action))
         
         
-    def is_terminal(self, node: BeamSearchNode) -> bool: 
+    def is_terminal(self, node: HeuristicGuidedSearchNode) -> bool: 
         if node.heuristic == 0:
             return True
         return False
