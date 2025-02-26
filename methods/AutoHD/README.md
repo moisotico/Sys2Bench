@@ -158,7 +158,7 @@ Distributed under the Apache-2.0 License. See `LICENSE` for more information.
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-
+This work was supported in part by National Science Foundation under grant CNS-2328395 and National Institutes of Health under grant U01AG070112.
 
 <!-- ## Citation
 
