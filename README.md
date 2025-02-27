@@ -49,7 +49,8 @@
   </p>
 </div>
 
-
+## Annoucement
+* [Feb 27, 2025] We release our new inference time techniques AutoHD code at [methods/AutoHD](`https://github.com/divelab/Sys2Bench/tree/main/methods/AutoHD`). The paper is available at [https://arxiv.org/abs/2502.19295](https://arxiv.org/abs/2502.19295).
 
 <!-- TABLE OF CONTENTS -->
 <details>
@@ -335,7 +336,7 @@ We also acknowledge previous contributions from [maitrix-org/llm-reasoners](http
 
 ## Citation
 
-If you found our work useful, please considering citing our preprint - "Inference-Time Computations for LLM Reasoning and Planning: A Benchmark and Insights"
+If you found our work useful, please consider citing our preprint - "Inference-Time Computations for LLM Reasoning and Planning: A Benchmark and Insights"
 
 ```
 @misc{2025Sys2BenchLLM,
@@ -348,6 +349,19 @@ If you found our work useful, please considering citing our preprint - "Inferenc
       url={https://arxiv.org/abs/2502.12521}, 
 }
 ```
+If you found AutoHD useful, please consider citing our paper - "Complex LLM Planning via Automated Heuristics Discovery"
+
+```
+@misc{ling2025complexllmplanningautomated,
+      title={Complex LLM Planning via Automated Heuristics Discovery}, 
+      author={Hongyi Ling and Shubham Parashar and Sambhav Khurana and Blake Olson and Anwesha Basu and Gaurangi Sinha and Zhengzhong Tu and James Caverlee and Shuiwang Ji},
+      year={2025},
+      eprint={2502.19295},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2502.19295}, 
+}
+``` 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [contributors-shield]: https://img.shields.io/github/contributors/divelab/sys2bench.svg?style=for-the-badge
