@@ -50,7 +50,7 @@
 </div>
 
 ## Annoucement
-* [Feb 27, 2025] We release our new inference time techniques AutoHD code at [methods/AutoHD](`https://github.com/divelab/Sys2Bench/tree/main/methods/AutoHD`). The paper is available at [https://arxiv.org/abs/2502.19295](https://arxiv.org/abs/2502.19295).
+* [Feb 27, 2025] We release our new inference time techniques AutoHD code at [`methods/AutoHD`](https://github.com/divelab/Sys2Bench/tree/main/methods/AutoHD). The paper is available at [https://arxiv.org/abs/2502.19295](https://arxiv.org/abs/2502.19295).
 
 <!-- TABLE OF CONTENTS -->
 <details>
