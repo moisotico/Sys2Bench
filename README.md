@@ -339,27 +339,21 @@ We also acknowledge previous contributions from [maitrix-org/llm-reasoners](http
 If you found our work useful, please consider citing our preprint - "Inference-Time Computations for LLM Reasoning and Planning: A Benchmark and Insights"
 
 ```
-@misc{2025Sys2BenchLLM,
-      title={Inference-Time Computations for LLM Reasoning and Planning: A Benchmark and Insights}, 
-      author={Shubham Parashar and Blake Olson and Sambhav Khurana and Eric Li and Hongyi Ling and James Caverlee and Shuiwang Ji},
-      year={2025},
-      eprint={2502.12521},
-      archivePrefix={arXiv},
-      primaryClass={cs.AI},
-      url={https://arxiv.org/abs/2502.12521}, 
+@article{parashar2025inference,
+  title={Inference-Time Computations for LLM Reasoning and Planning: A Benchmark and Insights},
+  author={Parashar, Shubham and Olson, Blake and Khurana, Sambhav and Li, Eric and Ling, Hongyi and Caverlee, James and Ji, Shuiwang},
+  journal={arXiv preprint arXiv:2502.12521},
+  year={2025}
 }
 ```
 If you found AutoHD useful, please consider citing our paper - "Complex LLM Planning via Automated Heuristics Discovery"
 
 ```
-@misc{ling2025complexllmplanningautomated,
-      title={Complex LLM Planning via Automated Heuristics Discovery}, 
-      author={Hongyi Ling and Shubham Parashar and Sambhav Khurana and Blake Olson and Anwesha Basu and Gaurangi Sinha and Zhengzhong Tu and James Caverlee and Shuiwang Ji},
-      year={2025},
-      eprint={2502.19295},
-      archivePrefix={arXiv},
-      primaryClass={cs.AI},
-      url={https://arxiv.org/abs/2502.19295}, 
+@article{ling2025complex,
+  title={Complex LLM Planning via Automated Heuristics Discovery},
+  author={Ling, Hongyi and Parashar, Shubham and Khurana, Sambhav and Olson, Blake and Basu, Anwesha and Sinha, Gaurangi and Tu, Zhengzhong and Caverlee, James and Ji, Shuiwang},
+  journal={arXiv preprint arXiv:2502.19295},
+  year={2025}
 }
 ``` 
 <!-- MARKDOWN LINKS & IMAGES -->
