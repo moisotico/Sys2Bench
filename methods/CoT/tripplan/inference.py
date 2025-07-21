@@ -10,6 +10,7 @@ from reasoners.benchmark import TripPlanEvaluator
 from reasoners.lm.hf_model import HFModel
 from reasoners.lm.llama_api_model import LLaMaApiModel
 from reasoners.lm.openai_model import OpenAIModel
+from reasoners.lm.ollama_model import OllamaModel
 
 
 class CoTReasoner:
@@ -52,7 +53,7 @@ class CoTReasoner:
 
 
 def main(
-    base_lm: Literal["hf", "google", "openai", "anthropic", "exllama", "llama2", "api"],
+    base_lm: Literal["hf", "google", "openai", "anthropic", "exllama", "llama2", "api", "ollama"] = "openai",
     model_dir=None,
     num_cities=3,
     data_path="data/tripplan/test_TripPlan-cities-{num_cities}.json",
@@ -74,6 +75,8 @@ def main(
             None, None, use_api=True, model_id=api_model_id, quantized=None
         )
         model_dir = base_model.model_id
+    elif base_lm == "ollama":
+        base_model = OllamaModel(model_name="qwen3:8b", additional_prompt="NONE")
     else:
         raise ValueError(f"base_lm {base_lm} is not supported")
 

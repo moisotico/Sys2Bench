@@ -7,6 +7,7 @@ from tqdm import tqdm
 from reasoners.lm.hf_model import HFModel
 from reasoners.lm.openai_model import OpenAIModel
 from reasoners.lm.llama_api_model import LLaMaApiModel
+from reasoners.lm.ollama_model import OllamaModel
 
 class CoTReasoner():
     def __init__(self, base_model, temperature=0.8, sc_num = 1):
@@ -24,25 +25,31 @@ class CoTReasoner():
             do_sample = False
         if isinstance(self.base_model, OpenAIModel) or isinstance(self.base_model, LLaMaApiModel):
             eos_token_id = []
+        elif isinstance(self.base_model, OllamaModel):
+            eos_token_id = [1]
         else:
             print(self.base_model.model.__class__)
             print(self.base_model.model.config.architectures[0])
             eos_token_id = [13]
         
         for _ in tqdm(range(self.sc_num), leave=False):
-            output = self.base_model.generate([inputs],
-                                          hide_input=True,
-                                          do_sample=do_sample,
-                                          temperature=self.temperature,
-                                          additional_prompt="ANSWER",
-                                          eos_token_id=eos_token_id).text[0].strip()
+            gen_kwargs = {
+                "hide_input": True,
+                "do_sample": do_sample,
+                "temperature": self.temperature,
+                "eos_token_id": eos_token_id
+            }
+            # Only add additional_prompt for non-Ollama models
+            if not isinstance(self.base_model, OllamaModel):
+                gen_kwargs["additional_prompt"] = "ANSWER"
+            output = self.base_model.generate([inputs], **gen_kwargs).text[0].strip()
             outputs.append(output)
         
         return outputs
             
             
 
-def main(base_lm:Literal['hf', 'openai', 'api'],
+def main(base_lm:Literal['hf', 'openai', 'api', 'ollama'] = 'openai',
          model_dir= None, 
          prompt="prompts/aqua/prompts.json", 
          data_path="data/aqua", 
@@ -52,6 +59,7 @@ def main(base_lm:Literal['hf', 'openai', 'api'],
          temperature=0,
          sc_num=1,
          api_model_id='meta-llama/Meta-Llama-3.1-8B-Instruct',
+         model_name=None,
          openai_model="gpt-4o-mini",
          log_dir=None):
 
@@ -62,6 +70,10 @@ def main(base_lm:Literal['hf', 'openai', 'api'],
     elif base_lm == 'api':
         base_model = LLaMaApiModel(None, None, use_api=True, model_id=api_model_id, quantized=None, additional_prompt="ANSWER")
         model_dir = base_model.model_id
+    elif base_lm == 'ollama':
+        if model_name is None:
+            model_name = "qwen3:8b"
+        base_model = OllamaModel(model_name=model_name, additional_prompt="ANSWER")
     else:
         raise ValueError(f"base_lm {base_lm} is not supported")
     with open(prompt) as f:

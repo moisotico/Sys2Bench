@@ -6,6 +6,7 @@ from reasoners.benchmark import BWEvaluator
 import fire
 from reasoners.lm.openai_model import OpenAIModel
 from reasoners.lm.llama_api_model import LLaMaApiModel
+from reasoners.lm.ollama_model import OllamaModel
 
 def extract_step(file_path):
     match = re.search(r'_step_(\d+)_', file_path)
@@ -32,18 +33,21 @@ class CoTReasoner():
 
         outputs = []
         for _ in range(self.sc_num):
-          if self.model_type == "completion":
-              outputs.append(self.base_model.generate([inputs],
-                                            hide_input=True,
-                                            do_sample=True,
-                                            temperature=self.temperature,
-                                            eos_token_id='\n[').text[0][:-1].strip())
-          elif self.model_type == "chat":
-              outputs.append(self.base_model.generate([inputs],
-                                            hide_input=True,
-                                            do_sample=True,
-                                            temperature=self.temperature).text[0].replace("[PLAN END]", "").strip()) 
-            
+            gen_kwargs = {
+                "hide_input": True,
+                "do_sample": True,
+                "temperature": self.temperature
+            }
+            if self.model_type == "completion":
+                gen_kwargs["eos_token_id"] = '\n['
+                # Only add additional_prompt for non-Ollama models
+                if not isinstance(self.base_model, OllamaModel):
+                    gen_kwargs["additional_prompt"] = "CONTINUE"
+                outputs.append(self.base_model.generate([inputs], **gen_kwargs).text[0][:-1].strip())
+            elif self.model_type == "chat":
+                if not isinstance(self.base_model, OllamaModel):
+                    gen_kwargs["additional_prompt"] = "CONTINUE"
+                outputs.append(self.base_model.generate([inputs], **gen_kwargs).text[0].replace("[PLAN END]", "").strip())
         return outputs
 
 def main(base_lm, prompt_path='prompts/blocksworld/pool_prompt_v1.json', 
@@ -58,7 +62,8 @@ def main(base_lm, prompt_path='prompts/blocksworld/pool_prompt_v1.json',
          sc_num=1,
          data_path='data/blocksworld/split_v1/split_v1_step_2_data.json',
          openai_model="gpt-4o-mini",
-         api_model_id='meta-llama/Meta-Llama-3.1-8B-Instruct'):
+         api_model_id='meta-llama/Meta-Llama-3.1-8B-Instruct',
+         model_name=None):
 
     if base_lm == "openai":
         base_model = OpenAIModel(openai_model, additional_prompt="CONTINUE")
@@ -67,6 +72,8 @@ def main(base_lm, prompt_path='prompts/blocksworld/pool_prompt_v1.json',
     elif base_lm == "api":
         base_model = LLaMaApiModel(None, None, use_api=True, model_id=api_model_id, quantized=None, additional_prompt="CONTINUE")
         model_dir = base_model.model_id
+    elif base_lm == "ollama":
+        base_model = OllamaModel(model_name=model_name, additional_prompt=None)
     with open(prompt_path) as f:
         prompt = json.load(f)
 

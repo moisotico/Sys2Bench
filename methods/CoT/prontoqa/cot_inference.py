@@ -1,12 +1,12 @@
 import json
 import fire
 from typing import Sequence, Any
-import json
 from data.prontoqa.dataset import ProntoQADataset
 from reasoners.lm.openai_model import OpenAIModel
 from reasoners.lm.hf_model import HFModel
 from reasoners.benchmark import ProntoQAEvaluatorFinal
 from reasoners.lm.llama_api_model import LLaMaApiModel
+from reasoners.lm.ollama_model import OllamaModel
 from datetime import datetime
 
 def sc_output_extractor(algo_output):
@@ -27,7 +27,6 @@ class CoTReasoner():
         self.n_sc = n_sc
         self.bs = bs
 
-
     def __call__(self, example, prompt=None):
         input_prompt = prompt
         input_prompt += "Q: " + example.test_example.question + " " + example.test_example.query + "\nA:"
@@ -35,15 +34,26 @@ class CoTReasoner():
 
         if isinstance(self.base_model, OpenAIModel) or isinstance(self.base_model, LLaMaApiModel):
             eos_token_id = []
+        elif isinstance(self.base_model, OllamaModel):
+            eos_token_id = [1]
         else:
             eos_token_id = [13]
 
         outputs = []
         for _ in range(self.n_sc):
-          output = self.base_model.generate([input_prompt], eos_token_id=eos_token_id, hide_input=True, temperature=self.temperature, do_sample=True).text[0]
-          print(f"output: '{output}'\n")
-          steps = [s.split("So")[1].strip()+'.' for s in output.split('.') if "So" in s]
-          outputs.append("\n".join(steps))
+            gen_kwargs = {
+                "eos_token_id": eos_token_id,
+                "hide_input": True,
+                "temperature": self.temperature,
+                "do_sample": True,
+            }
+            # Only pass additional_prompt if not OllamaModel
+            if not isinstance(self.base_model, OllamaModel):
+                gen_kwargs["additional_prompt"] = "CONTINUE"
+            output = self.base_model.generate([input_prompt], **gen_kwargs).text[0]
+            print(f"output: '{output}'\n")
+            steps = [s.split("So")[1].strip() + '.' for s in output.split('.') if "So" in s]
+            outputs.append("\n".join(steps))
 
         return outputs
 
@@ -53,7 +63,8 @@ def main(base_lm='openai',
          quantized="int8", 
          sc_num=1, 
          openai_model="gpt-4o-mini",
-         api_model_id='meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo'):
+         api_model_id='meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
+         model_name=None):
 
     if base_lm == "openai":
         language_model = OpenAIModel(openai_model, additional_prompt="CONTINUE")
@@ -62,17 +73,21 @@ def main(base_lm='openai',
     elif base_lm == "api":
         language_model = LLaMaApiModel(None, None, use_api=True, model_id=api_model_id, quantized=None, additional_prompt="CONTINUE")
         model_dir = language_model.model_id
+    elif base_lm == "ollama":
+        language_model = OllamaModel(model_name=model_name or "qwen3:8b", additional_prompt=None)
     else:
         raise ValueError(f"Unknown model: {base_lm}")
     
-    if base_lm == 'hf' or base_lm == 'api':
-        model_name= model_dir.split('/')[-1]
+    if model_name:
+        log_model_name = model_name
+    elif base_lm == 'hf' or base_lm == 'api':
+        log_model_name = model_dir.split('/')[-1] if model_dir else base_lm
     else:
-        model_name = f'{base_lm}_{language_model.model}'   
+        log_model_name = f'{base_lm}_{getattr(language_model, "model", base_lm)}'   
     
     log_dir =  f'logs/prontoqa'\
                         f'/cot/'\
-                        f'{datetime.now().strftime("%m%d%Y-%H%M%S")}_{model_name}'
+                        f'{datetime.now().strftime("%m%d%Y-%H%M%S")}_{log_model_name}'
 
     with open('prompts/prontoqa/example_next_steps.json') as f:
         init_prompt = json.load(f)

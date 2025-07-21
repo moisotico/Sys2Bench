@@ -45,3 +45,4 @@ models/
 planner_tools/
 logs/*
 LLMs-Planning/
+sys2bench.egg-info

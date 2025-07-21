@@ -5,6 +5,7 @@ from typing import Literal
 from utils import extract_final_answer
 from reasoners.lm.openai_model import OpenAIModel
 from reasoners.lm.llama_api_model import LLaMaApiModel
+from reasoners.lm.ollama_model import OllamaModel
 import transformers
 from datetime import datetime
 from reasoners.benchmark import StrategyQAEvaluator
@@ -17,18 +18,18 @@ class CotReasoner:
         self.sc_num = sc_num
     
     def __call__(self, example, prompt=None):
-        
         do_sample = True
         if self.temperature == 0 and isinstance(self.base_model, HFModel):
             print("Using greedy decoding with HF model. Set do_sample=False")
-            self.temperature == 1.0
+            self.temperature = 1.0
             do_sample = False
         
         input_prompt = f"{prompt['cot']}\n\nQ: {example}\nA:"
-
         print(input_prompt, flush=True)
         if isinstance(self.base_model, OpenAIModel) or isinstance(self.base_model, LLaMaApiModel):
             eos_token_id = []
+        elif isinstance(self.base_model, OllamaModel):
+            eos_token_id = [1]
         elif isinstance(self.base_model.model, transformers.GemmaForCausalLM):
             eos_token_id = [108,109]
         elif isinstance(self.base_model.model, transformers.MistralForCausalLM) or isinstance(self.base_model.model, transformers.MixtralForCausalLM):
@@ -37,16 +38,19 @@ class CotReasoner:
             assert isinstance(self.base_model.model, transformers.LlamaForCausalLM)
             eos_token_id = [13]
         answers = []
-
-        
         for _ in range(self.sc_num):
-            # generate the answer
+            gen_kwargs = {
+                "do_sample": do_sample,
+                "temperature": self.temperature,
+                "num_return_sequences": 1,
+                "eos_token_id": eos_token_id
+            }
+            # Only pass additional_prompt if not OllamaModel
+            if not isinstance(self.base_model, OllamaModel):
+                gen_kwargs["additional_prompt"] = "ANSWER"
             output = self.base_model.generate(
                 [input_prompt],
-                do_sample=do_sample,
-                temperature=self.temperature,
-                num_return_sequences=1,
-                eos_token_id=eos_token_id
+                **gen_kwargs
             ).text[0]
             output_ans = extract_final_answer(output)
             answers.append(output_ans)
@@ -60,7 +64,7 @@ class CotReasoner:
         
 
 
-def main(base_lm: Literal['hf','openai', 'api'] = 'openai',
+def main(base_lm: Literal['hf','openai', 'api', 'ollama'] = 'openai',
             model_dir: str = None,
             sc_num: int = 1,
             prompt_path: str = 'prompts/strategyqa/prompts.json',
@@ -71,27 +75,31 @@ def main(base_lm: Literal['hf','openai', 'api'] = 'openai',
             quantized = 'int8',
             openai_model='gpt-4o-mini',
             api_model_id='meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
+            model_name=None,
             **kwargs):
-
 
     if base_lm == 'hf':
         base_model = HFModel(model_dir, model_dir,quantized=quantized)
     elif base_lm == 'openai':
         base_model = OpenAIModel(openai_model, additional_prompt="ANSWER")
     elif base_lm == 'api':
-        base_model = LLaMaApiModel(None, None, use_api=True, model_id=api_model_id, quantized=None)
+        base_model = LLaMaApiModel(None, None, use_api=True, model_id=api_model_id, quantized=None, additional_prompt="ANSWER")
         model_dir = base_model.model_id
+    elif base_lm == 'ollama':
+        base_model = OllamaModel(model_name=model_name or "qwen3:8b", additional_prompt=None)
     else:
         raise ValueError(f"base_lm {base_lm} is not supported")
 
     log_dir =  f'logs/strategyQA'\
                         f'/cot/'\
                         f'{datetime.now().strftime("%m%d%Y-%H%M%S")}'
-    if base_lm == 'hf' or base_lm == 'api':
-        model_name = model_dir.split('/')[-1]
+    if model_name:
+        log_model_name = model_name
+    elif base_lm == 'hf' or base_lm == 'api':
+        log_model_name = model_dir.split('/')[-1] if model_dir else base_lm
     else:
-        model_name = base_lm
-    log_dir = log_dir + f'_{model_name}'
+        log_model_name = base_lm
+    log_dir = log_dir + f'_{log_model_name}'
     # load the dataset
 
     with open(prompt_path, 'r') as f:

@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sys2bench"
+version = "0.1.0"
+description = "Sys2Bench: A benchmark for evaluating reasoning and planning abilities of LLMs."
+authors = [
+    { name="Sys2Bench Team", email="shubhamprshr@tamu.edu" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests",
+    "fire",
+    "transformers",
+    "torch",
+    "peft",
+    "numpy",
+    "accelerate",
+    "bitsandbytes",
+    "datasets",
+    "fairscale",
+    "huggingface-hub",
+    "openai",
+    "optimum",
+    "packaging",
+    "pandas",
+    "pddl",
+    "psutil",
+    "pyarrow",
+    "pydantic",
+    "pyparsing",
+    "PyYAML",
+    "regex",
+    "scipy",
+    "sentencepiece",
+    "tarski",
+    "termcolor",
+    "tiktoken",
+    "tokenizers",
+    "tqdm",
+    # add any other dependencies here
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    # add dev dependencies here
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["reasoners*", "methods*", "LLMs-Planning*", "plan-bench*", "planner_tools*"]

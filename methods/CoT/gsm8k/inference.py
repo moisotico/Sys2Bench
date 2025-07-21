@@ -1,5 +1,6 @@
 import json
 from reasoners.lm.openai_model import OpenAIModel
+from reasoners.lm.ollama_model import OllamaModel
 from reasoners.benchmark import GSM8KEvaluator
 from reasoners.lm.hf_model import HFModel
 from reasoners.lm.llama_api_model import LLaMaApiModel
@@ -25,25 +26,33 @@ class CoTReasoner():
         do_sample = True
         if self.temperature == 0 and isinstance(self.base_model, HFModel):
             print("Using greedy decoding with HF model. Set do_sample=False")
-            self.temperature == 1.0
+            self.temperature = 1.0
             do_sample = False
         if isinstance(self.base_model, OpenAIModel) or isinstance(self.base_model, LLaMaApiModel):
             eos_token_id = []
+        elif isinstance(self.base_model, OllamaModel):
+            eos_token_id = [1]
         else:
             assert isinstance(self.base_model.model, transformers.LlamaForCausalLM)
             eos_token_id = [13]
 
         for i in range((self.n_sc - 1) // self.bs + 1):
             local_bs = min(self.bs, self.n_sc - i * self.bs)
-            outputs += self.base_model.generate([inputs] * local_bs,
-                                            hide_input=True,
-                                            do_sample=do_sample,
-                                            temperature=self.temperature,
-                                            eos_token_id=eos_token_id).text
+            gen_kwargs = {
+                "hide_input": True,
+                "do_sample": do_sample,
+                "temperature": self.temperature,
+                "eos_token_id": eos_token_id
+            }
+            # Only pass additional_prompt if not OllamaModel
+            if not isinstance(self.base_model, OllamaModel):
+                gen_kwargs["additional_prompt"] = "ANSWER"
+            outputs += self.base_model.generate([inputs] * local_bs, **gen_kwargs).text
         outputs= [o.strip() if o.strip().endswith(".") else o.strip() + "." for o in outputs]
 
         return outputs
-def main(base_lm:Literal['hf', 'openai', "api"],
+        
+def main(base_lm:Literal['hf', 'openai', "api", "ollama"],
          model_dir=None,
          batch_size=1, 
          prompt="prompts/gsm8k/prompts.json", 
@@ -53,7 +62,8 @@ def main(base_lm:Literal['hf', 'openai', "api"],
          sc_num=1, 
          quantized='int8',
          openai_model="gpt-4o-mini",
-         api_model_id='meta-llama/Meta-Llama-3.1-8B-Instruct'):
+         api_model_id='meta-llama/Meta-Llama-3.1-8B-Instruct',
+         model_name=None):
 
     if base_lm == "openai":
         base_model = OpenAIModel(openai_model, additional_prompt="ANSWER")
@@ -62,6 +72,8 @@ def main(base_lm:Literal['hf', 'openai', "api"],
     elif base_lm == 'api':
         base_model = LLaMaApiModel(None, None, use_api=True, model_id=api_model_id, quantized=None, additional_prompt="ANSWER")
         model_dir = base_model.model_id
+    elif base_lm == 'ollama':
+        base_model = OllamaModel(model_name=model_name or "qwen3:8b", additional_prompt=None)
     else:
         raise ValueError(f"Unknown base_lm: {base_lm}")
     with open(prompt) as f:
@@ -79,11 +91,13 @@ def main(base_lm:Literal['hf', 'openai', "api"],
     log_dir =  f'logs/gsm8k/'\
                         f'/cot_{sc_num}/'\
                         f'{datetime.now().strftime("%m%d%Y-%H%M%S")}'
-    if base_lm == 'hf' or base_lm == 'api':
-        model_name= model_dir.split('/')[-1]
+    if model_name:
+        log_model_name = model_name
+    elif base_lm == 'hf' or base_lm == 'api':
+        log_model_name = model_dir.split('/')[-1] if model_dir else base_lm
     else:
-        model_name = base_lm
-    log_dir = log_dir + f'_{model_name}'
+        log_model_name = base_lm
+    log_dir = log_dir + f'_{log_model_name}'
 
     accuracy = evaluator.evaluate(reasoner, shuffle_prompt=True, num_shot=4, resume=resume, log_dir=log_dir)
     print(f'accuracy: {accuracy:.4f}')

@@ -10,6 +10,7 @@ from reasoners.benchmark import Game24Evaluator
 from reasoners.lm.openai_model import OpenAIModel
 from reasoners.lm.hf_model import HFModel
 from reasoners.lm.llama_api_model import LLaMaApiModel
+from reasoners.lm.ollama_model import OllamaModel
 # import os
 # import sys
 import json
@@ -37,12 +38,32 @@ class CoTReasoner:
     def __call__(self, example, prompt:dict =None):
         inputs = prompt["cot"].replace("{input}", example)
         outputs = []
-        outputs = self.base_model.generate([inputs], 
-                                           eos_token_id='\n', 
-                                           num_return_sequences=self.n_sc, 
-                                           temperature=self.temperature,
-                                           do_sample=False, 
-                                           additional_prompt='CONTINUE').text
+        do_sample = True
+        if self.temperature == 0 and isinstance(self.base_model, HFModel):
+            print("Using greedy decoding with HF model. Set do_sample=False")
+            self.temperature = 1.0
+            do_sample = False
+        if isinstance(self.base_model, OpenAIModel) or isinstance(self.base_model, LLaMaApiModel):
+            eos_token_id = []
+        elif isinstance(self.base_model, OllamaModel):
+            eos_token_id = [1]
+        else:
+            eos_token_id = [13]
+        for i in range((self.n_sc - 1) // self.bs + 1):
+            local_bs = min(self.bs, self.n_sc - i * self.bs)
+            gen_kwargs = {
+                "hide_input": True,
+                "do_sample": do_sample,
+                "temperature": self.temperature,
+                "eos_token_id": eos_token_id,
+            }
+            # Only pass additional_prompt if not OllamaModel
+            if not isinstance(self.base_model, OllamaModel):
+                gen_kwargs["additional_prompt"] = "CONTINUE"
+            outputs += self.base_model.generate(
+                [inputs] * local_bs,
+                **gen_kwargs,
+            ).text
         outputs = [o.replace('Answer:', '').strip() for o in outputs]
         return outputs
        
@@ -50,7 +71,7 @@ class CoTReasoner:
 
 if __name__ == '__main__':
 
-    def main(base_lm: Literal[ 'hf',  'openai', 'api'] = 'openai',
+    def main(base_lm: Literal[ 'hf',  'openai', 'api', 'ollama'] = 'openai',
              hf_path: str = 'meta-llama/Llama-2-13b-hf',
              hf_peft_path: Optional[str] = None,
              hf_quantized: Optional[Literal['awq', 'int8', 'fp4', 'nf4']] = None,
@@ -63,23 +84,28 @@ if __name__ == '__main__':
              disable_log: bool = False,
              prompts_file: str = 'prompts/game24/prompts.json',
              resume=0,
+             model_name=None,
              **kwargs):
 
         if base_lm == 'hf':
             base_model = HFModel(hf_path, hf_path, max_batch_size=batch_size, max_new_tokens=512,
                                  peft_pth=hf_peft_path, quantized=hf_quantized, load_awq_pth=hf_load_awq_path)
         elif base_lm == 'openai':
-            base_model = OpenAIModel(openai_model)
+            base_model = OpenAIModel(openai_model, additional_prompt="CONTINUE")
         elif base_lm == 'api':
-            base_model = LLaMaApiModel(None, None, use_api=True, model_id=api_model_id, quantized=None)
+            base_model = LLaMaApiModel(None, None, use_api=True, model_id=api_model_id, quantized=None, additional_prompt="CONTINUE")
             model_dir = base_model.model_id
+        elif base_lm == 'ollama':
+            base_model = OllamaModel(model_name=model_name or "qwen3:8b", additional_prompt=None)
         else:
             assert False, f'cannot resolve {base_lm=}'
             
-        if base_lm == 'hf' or base_lm == 'api':
-            model_name= model_dir.split('/')[-1]
+        if model_name:
+            log_model_name = model_name
+        elif base_lm == 'hf' or base_lm == 'api':
+            log_model_name = model_dir.split('/')[-1] if 'model_dir' in locals() and model_dir else base_lm
         else:
-            model_name = base_lm
+            log_model_name = base_lm
             
         with open(prompts_file) as f:
             prompts = json.load(f)
@@ -87,7 +113,7 @@ if __name__ == '__main__':
         log_dir =  f'logs/game24/'\
                         f'CoT/'\
                         f'{datetime.now().strftime("%m%d%Y-%H%M%S")}'
-        log_dir = log_dir + f'_{model_name}'
+        log_dir = log_dir + f'_{log_model_name}'
         reasoner = CoTReasoner(
             base_model, temperature=temperature, n_sc=sc_num, bs=batch_size
         )
