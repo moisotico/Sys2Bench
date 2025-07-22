@@ -75,7 +75,10 @@ class BinPackingConfig(SearchConfig):
             return [output]
         else:
             prompt = self.propose_prompt_wrap(state, self.example)
-            output = self.base_model.generate([prompt], num_return_sequences=1, do_sample=False, eos_token_id='Input', additional_prompt="CONTINUE").text[0]
+            if self.base_model.__class__.__name__ == "OllamaModel":
+                output = self.base_model.generate([prompt], num_return_sequences=1, do_sample=False, eos_token_id='Input').text[0]
+            else:
+                output = self.base_model.generate([prompt], num_return_sequences=1, do_sample=False, eos_token_id='Input', additional_prompt="CONTINUE").text[0]
             output = output.strip()
             if '\n\n' in output:
                 output = output.split('\n\n')[0]

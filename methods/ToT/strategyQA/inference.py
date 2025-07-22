@@ -12,7 +12,7 @@ from reasoners import Reasoner
 from reasoners.benchmark import StrategyQAEvaluator
 
 
-def main(base_lm: Literal['hf','openai','api'] = 'hf',
+def main(base_lm: Literal['hf','openai','api','ollama'] = 'hf',
             model_dir: str = None,
             batch_size: int = 1,
             max_seq_len: int = 3072,
@@ -40,6 +40,9 @@ def main(base_lm: Literal['hf','openai','api'] = 'hf',
     elif base_lm == 'api':
         base_model = LLaMaApiModel(None, None, use_api=True, model_id=api_model_id, quantized=None, additional_prompt="ANSWER")
         model_dir = base_model.model_id
+    elif base_lm == 'ollama':
+        from reasoners.lm.ollama_model import OllamaModel
+        base_model = OllamaModel(model_name="qwen3:8b", additional_prompt=None)
     else:
         raise ValueError(f"base_lm {base_lm} is not supported")
         

@@ -1,5 +1,6 @@
 import json
 from typing import Literal, Optional
+from datetime import datetime
 
 import fire
 import utils
@@ -14,8 +15,9 @@ from reasoners.lm.openai_model import OpenAIModel
 
 
 def main(
-    base_lm: Literal["hf", "openai", "api"] = "openai",
+    base_lm: Literal["hf", "openai", "api", "ollama"] = "openai",
     model_dir=None,
+    model_name=None,
     api_model_id="meta-llama/Meta-Llama-3.1-70B-Instruct",
     openai_model="gpt-4o-mini",
     prompt="prompts/calendarplan/prompts.json",
@@ -52,21 +54,25 @@ def main(
             None, None, use_api=True, model_id=api_model_id, quantized=None
         )
         model_dir = base_model.model_id
+    elif base_lm == "ollama":
+        from reasoners.lm.ollama_model import OllamaModel
+
+        base_model = OllamaModel(model_name=model_name or "qwen3:8b", additional_prompt=None)
     else:
-        assert False, f"cannot resolve {base_lm=}"
+        raise ValueError(f"base_lm {base_lm} is not supported")
 
     with open(prompt) as f:
         prompt = json.load(f)
 
-    if base_lm == "hf":
-        model_name = model_dir.split("/")[-1]
+    # Consistent model_name for logging
+    if model_name:
+        log_model_name = model_name
+    elif base_lm == "hf" and model_dir:
+        log_model_name = model_dir.split("/")[-1]
     else:
-        model_name = base_lm
+        log_model_name = base_lm
 
-    from datetime import datetime
-
-    log_dir = f"logs/calendarplan/ToT/{datetime.now().strftime('%m%d%Y-%H%M%S')}"
-    log_dir = log_dir + f"_{model_name}"
+    log_dir = f"logs/calendarplan/ToT/{datetime.now().strftime('%m%d%Y-%H%M%S')}_{log_model_name}"
 
     search_algo_params |= {"max_depth": depth_limit}
     search_algo_params |= {
@@ -91,7 +97,7 @@ def main(
     evaluator = CalendarPlanEvaluator(
         output_extractor=utils.tot_extractor,
         answer_extractor=lambda x: utils.retrieve_answer_from_dataset(x["golden_plan"]),
-        init_prompt=prompt,  # will update dynamically
+        init_prompt=prompt,
         dataset_path=data_path,
         disable_log=False,
         disable_tqdm=False,

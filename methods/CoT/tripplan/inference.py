@@ -31,6 +31,8 @@ class CoTReasoner:
             self.base_model, LLaMaApiModel
         ):
             eos_token_id = []
+        elif isinstance(self.base_model, OllamaModel):
+            eos_token_id = [1]
         else:
             print(self.base_model.model.__class__)
             print(self.base_model.model.config.architectures[0])

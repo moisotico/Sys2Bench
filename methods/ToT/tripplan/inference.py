@@ -16,7 +16,7 @@ from reasoners.benchmark import TripPlanEvaluator
 from reasoners.lm.llama_api_model import LLaMaApiModel
 
 
-def main(base_lm:Literal['hf', 'openai', 'api',] = 'api',
+def main(base_lm:Literal['hf', 'openai', 'api', 'ollama'] = 'api',
          model_dir= "/data3/blakeo/Llama-3.1-8B", 
          num_cities=3, 
          data_path="data/tripplan/test_TripPlan-cities-{num_cities}.json",
@@ -27,6 +27,7 @@ def main(base_lm:Literal['hf', 'openai', 'api',] = 'api',
          log_dir=None,
          depth_limit: int = 6,
          openai_model="gpt-4o-mini",
+         model_name=None,
          **search_algo_params):
 
     if base_lm == "openai":
@@ -36,13 +37,18 @@ def main(base_lm:Literal['hf', 'openai', 'api',] = 'api',
     elif base_lm == 'api':
         base_model = LLaMaApiModel(None, None, use_api=True, model_id='meta-llama/Meta-Llama-3.1-405B-Instruct', quantized=None)
         model_dir = base_model.model_id
+    elif base_lm == 'ollama':
+        from reasoners.lm.ollama_model import OllamaModel
+        base_model = OllamaModel(model_name=model_name or "qwen3:8b", additional_prompt=None)
     else:
         raise ValueError(f"base_lm {base_lm} is not supported")
     
     if base_lm == 'hf':
-        model_name = model_dir.split('/')[-1]
+        model_name_str = model_dir.split('/')[-1]
+    elif base_lm == 'ollama':
+        model_name_str = model_name or "qwen3:8b"
     else:
-        model_name = f'{base_lm}_{base_model.model}'
+        model_name_str = f'{base_lm}_{getattr(base_model, "model", base_lm)}'
     data_path = data_path.format(num_cities=num_cities)
     prompt_path = prompt_path.format(num_cities=num_cities)
     with open(prompt_path) as f:
@@ -59,7 +65,7 @@ def main(base_lm:Literal['hf', 'openai', 'api',] = 'api',
     }
 
     # logs storage
-    log_dir = log_dir + f'_{model_name}'
+    log_dir = log_dir + f'_{model_name_str}'
     world_model = TripPlanWorldModel(total_days=100, base_model=base_model, prompt=prompt)
     config = TPConfig(base_model=base_model, prompt=prompt, temperature=temperature, calc_reward="sampling")
     search_algo = BeamSearch(**search_algo_params)

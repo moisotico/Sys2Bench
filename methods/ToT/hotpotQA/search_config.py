@@ -34,6 +34,16 @@ class HotpotConfig(SearchConfig):
         print("Prompt: ", input_prompt)
 
         outputs = []
+        generate_kwargs = {
+            "num_return_sequences": self.n_candidate,
+            "temperature": self.temperature,
+            "do_sample": True,
+            "hide_input": True,
+        }
+        # Only add stop if not OllamaModel
+        if self.base_model.__class__.__name__ != "OllamaModel":
+            generate_kwargs["stop"] = "."
+
         if len(state.state_history) == self.depth_limit - 1:
             input_prompt = self.prompt["cot"].replace("{QUESTION}", self.example)
             input_prompt += "".join([". " + s for s in state.state_history])
@@ -41,25 +51,16 @@ class HotpotConfig(SearchConfig):
             print("Prompt: ", input_prompt)
             outputs = self.base_model.generate(
                 [input_prompt],
-                num_return_sequences=self.n_candidate,
-                temperature=self.temperature,
-                do_sample=True,
-                hide_input=True,
+                **generate_kwargs
             ).text
         else:
             outputs = self.base_model.generate(
                 [input_prompt],
-                num_return_sequences=self.n_candidate,
-                stop=".",
-                temperature=self.temperature,
-                do_sample=True,
-                hide_input=True,
+                **generate_kwargs
             ).text
 
         print("Action history: ", "".join(["  " + s for s in state.state_history]))
-        # Filter outputs here
         print("-------------------------------")
-        # deduplicate
         ret = list(dict.fromkeys(outputs))
         print("ACTIONS Outputs: with temperature  ", self.temperature, "  :  ", ret)
         return ret
@@ -74,13 +75,18 @@ class HotpotConfig(SearchConfig):
 
             rating_prompt = self.prompt["rating_prompt"].replace("{input_prompt}", input_prompt).replace("{action}", action)
             print("Rating prompt: ", rating_prompt)
+            rating_kwargs = {
+                "num_return_sequences": self.n_candidate,
+                "temperature": self.temperature,
+                "do_sample": True,
+                "hide_input": True,
+            }
+            if self.base_model.__class__.__name__ != "OllamaModel":
+                rating_kwargs["stop"] = "."
+
             rating_response = self.base_model.generate(
                 [rating_prompt],
-                num_return_sequences=self.n_candidate,
-                stop=".",
-                temperature=self.temperature,
-                do_sample=True,
-                hide_input=True,
+                **rating_kwargs
             )
             try:
                 rating = float(rating_response.text[0].strip())

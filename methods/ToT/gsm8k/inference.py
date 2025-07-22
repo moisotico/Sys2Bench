@@ -12,7 +12,7 @@ from search_config import GSM8KConfig
 from reasoners.lm.llama_api_model import LLaMaApiModel
 from datetime import datetime
 
-def main(base_lm:Literal['hf', 'openai', "api"],
+def main(base_lm:Literal['hf', 'openai', "api", "ollama"] = "openai",
          model_dir="/data3/blakeo/Llama-3.1-8B", 
          prompt="prompts/gsm8k/prompts.json", 
          resume=0, 
@@ -31,6 +31,9 @@ def main(base_lm:Literal['hf', 'openai', "api"],
     elif base_lm == 'api':
         base_model = LLaMaApiModel(None, None, use_api=True, model_id=api_model_id, quantized=None, additional_prompt="ANSWER")
         model_dir = base_model.model_id
+    elif base_lm == 'ollama':
+        from reasoners.lm.ollama_model import OllamaModel
+        base_model = OllamaModel(model_name="qwen3:8b", additional_prompt="ANSWER")
     else:
         raise ValueError(f"Unknown base_lm: {base_lm}")
     with open(prompt) as f:

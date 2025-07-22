@@ -58,7 +58,7 @@ def tot_game24(base_model: LanguageModel,
 if __name__ == '__main__':
     import fire
 
-    def main(base_lm: Literal['hf', 'openai', 'api'] = 'openai',
+    def main(base_lm: Literal['hf', 'openai', 'api', 'ollama'] = 'openai',
              model_dir: str = 'meta-llama/Llama-2-13b-hf',
              quantized: Optional[Literal['awq', 'int8', 'fp4', 'nf4']] = None,
              batch_size: int = 1,
@@ -71,6 +71,7 @@ if __name__ == '__main__':
              api_model_id='meta-llama/Meta-Llama-3.1-70B-Instruct',
              openai_model='gpt-4o-mini',
              calc_reward: Literal['sampling', 'logits'] = 'sampling',
+             model_name=None,
              **kwargs):
         
         with open(prompts) as f:
@@ -87,6 +88,11 @@ if __name__ == '__main__':
             from reasoners.lm.llama_api_model import LLaMaApiModel
             base_model = LLaMaApiModel(None, None, use_api=True, model_id=api_model_id, quantized=None)
             model_dir = base_model.model_id
+        elif base_lm == 'ollama':
+            from reasoners.lm.ollama_model import OllamaModel
+            if model_name is None:
+                model_name = "qwen3:8b"
+            base_model = OllamaModel(model_name=model_name, additional_prompt="NONE")
         else:
             raise ValueError(f"base_lm {base_lm} is not supported")
             

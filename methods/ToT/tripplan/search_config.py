@@ -23,15 +23,18 @@ class TPConfig(SearchConfig):
         input_prompt += "".join([" " + s for s in state.state_history])
         print("Action history: ", "".join([" " + s for s in state.state_history]))
 
-        outputs = self.base_model.generate([input_prompt],
-                                          num_return_sequences=self.n_candidate,
-                                          stop=".",
-                                          temperature=self.temperature,
-                                          do_sample=True,
-                                          hide_input=True,
-                                          additional_prompt="CONTINUE",
-                                          ).text
-        
+        generate_kwargs = {
+            "num_return_sequences": self.n_candidate,
+            "temperature": self.temperature,
+            "do_sample": True,
+            "hide_input": True,
+        }
+        # Only add these if not OllamaModel
+        if self.base_model.__class__.__name__ != "OllamaModel":
+            generate_kwargs["stop"] = "."
+            generate_kwargs["additional_prompt"] = "CONTINUE"
+
+        outputs = self.base_model.generate([input_prompt], **generate_kwargs).text
         outputs = [o + '.' for o in outputs]
         print("-------------------------------")
 
@@ -40,35 +43,55 @@ class TPConfig(SearchConfig):
         print("ACTIONS Outputs: with temperature  ", self.temperature,"  :  ", outputs)
         actions = []
         for output in outputs:
-          # get stay duration
-          start_day = utils.calculate_start_day(output)
-          end_day = utils.calculate_end_day(output)
-          if end_day == None or start_day < state.current_day:
-             continue
-          actions.append(TripPlanAction(current_day=end_day, action=output))
+            start_day = utils.calculate_start_day(output)
+            end_day = utils.calculate_end_day(output)
+            if end_day is None or start_day < state.current_day:
+                continue
+            actions.append(TripPlanAction(current_day=end_day, action=output))
         
         if len(actions) == 0:
-           output = self.base_model.generate([input_prompt], temperature=self.temperature, do_sample=True, hide_input=True, additional_prompt="CONTINUE").text
-           new_actions = []
-           new_actions.append(TripPlanAction(current_day=200, action=output[0]))
-           return new_actions
+            fallback_kwargs = {
+                "temperature": self.temperature,
+                "do_sample": True,
+                "hide_input": True,
+            }
+            if self.base_model.__class__.__name__ != "OllamaModel":
+                fallback_kwargs["additional_prompt"] = "CONTINUE"
+            output = self.base_model.generate([input_prompt], **fallback_kwargs).text
+            new_actions = [TripPlanAction(current_day=200, action=output[0])]
+            return new_actions
         
         return actions
 
 
     def fast_reward(self, state: TripPlanState, action: TripPlanAction) -> tuple[float, dict]:
-        if self.calc_reward == 'sampling':
-          input_prompt = (self.prompt['tot_prefix'] + self.prompt['tot']).replace("{Question}", self.example)
-          input_prompt += "".join([" " + s for s in state.state_history])
+        input_prompt = (self.prompt['tot_prefix'] + self.prompt['tot']).replace("{Question}", self.example)
+        input_prompt += "".join([" " + s for s in state.state_history])
 
-          rating_prompt = f"Given the prompt:\n{input_prompt}\n\n" \
-                          f"Rate the action:\n'{action.action}'\non a scale from 1 to 10. Do not grade easy. Provide only a number in response."
-          rating_response = self.base_model.generate([rating_prompt])
-          try:
-            rating = float(rating_response.text[0].strip())
-          except:
-            rating = 0
-          return rating, {'intuition': rating, 'self_eval': rating}
+        # Ollama fallback: use sampling or default value
+        if self.base_model.__class__.__name__ == "OllamaModel":
+            rating_prompt = f"Given the prompt:\n{input_prompt}\n\nRate the action:\n'{action.action}'\non a scale from 1 to 10. Provide only a number."
+            generate_kwargs = {
+                "temperature": self.temperature,
+                "do_sample": True,
+                "hide_input": True,
+            }
+            try:
+                rating_response = self.base_model.generate([rating_prompt], **generate_kwargs)
+                rating = float(rating_response.text[0].strip())
+            except Exception:
+                rating = 0
+            return rating, {'intuition': rating, 'self_eval': rating}
+
+        # Non-Ollama models
+        if self.calc_reward == 'sampling':
+            rating_prompt = f"Given the prompt:\n{input_prompt}\n\nRate the action:\n'{action.action}'\non a scale from 1 to 10. Provide only a number."
+            rating_response = self.base_model.generate([rating_prompt], temperature=self.temperature)
+            try:
+                rating = float(rating_response.text[0].strip())
+            except:
+                rating = 0
+            return rating, {'intuition': rating, 'self_eval': rating}
         
         inputs = (self.prompt['tot_prefix'] + self.prompt['tot']).replace("{Question}", self.example)
         inputs += "".join([" " + s for s in state.state_history])

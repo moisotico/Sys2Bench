@@ -51,7 +51,7 @@ def tot_game24(base_model: LanguageModel,
 
 
 
-def main(base_lm: Literal['hf', 'openai', 'api'] = 'openai',
+def main(base_lm: Literal['hf', 'openai', 'api', 'ollama'] = 'openai',
              model_dir: str = '',
              hf_peft_path: Optional[str] = None,
              quantized: Optional[Literal['awq', 'int8', 'fp4', 'nf4']] = None,
@@ -77,6 +77,9 @@ def main(base_lm: Literal['hf', 'openai', 'api'] = 'openai',
             from reasoners.lm.llama_api_model import LLaMaApiModel
             base_model = LLaMaApiModel(None, None, use_api=True, model_id=api_model_id, quantized=None)
             model_dir = base_model.model_id
+        elif base_lm == 'ollama':
+            from reasoners.lm.ollama_model import OllamaModel
+            base_model = OllamaModel(model_name="qwen3:8b", additional_prompt="NONE")
         else:
             assert False, f'cannot resolve {base_lm=}'
         

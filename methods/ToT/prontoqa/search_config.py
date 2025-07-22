@@ -28,13 +28,18 @@ class ProntoQAToTSearchConfig(SearchConfig[ProntoQAState, ProntoQAAction, Pronto
         input_prompt += "Q: " + self.example.test_example.question + " " + self.example.test_example.query + "\nA:"
         input_prompt += "".join([" " + s for s in state])
 
-        output = self.base_model.generate([input_prompt],
-                                          num_return_sequences=self.n_actions,
-                                          temperature=0.8, #self.temperature,
-                                          stop=".",
-                                          do_sample=True,
-                                          additional_prompt="CONTINUE",
-                                          hide_input=True).text
+        generate_kwargs = {
+            "num_return_sequences": self.n_actions,
+            "temperature": self.temperature,
+            "do_sample": True,
+            "hide_input": True,
+        }
+        # Only add these if not OllamaModel
+        if self.base_model.__class__.__name__ != "OllamaModel":
+            generate_kwargs["stop"] = "."
+            generate_kwargs["additional_prompt"] = "CONTINUE"
+
+        output = self.base_model.generate([input_prompt], **generate_kwargs).text
 
         ret = [o.strip() + '.' for o in output]
         print(f"model generated actions: {ret}")

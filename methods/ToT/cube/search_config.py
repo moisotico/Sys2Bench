@@ -57,14 +57,15 @@ class CubeConfig(SearchConfig):
 
             rating_prompt = self.prompt["rating_prompt"].replace("{input_prompt}", input_prompt).replace("{action}", action)
 
-            rating_response = self.base_model.generate(
-                [rating_prompt],
-                num_return_sequences=self.n_candidate,
-                stop="\n",
-                temperature=self.temperature,
-                do_sample=True,
-                hide_input=True,
-            )
+            generate_kwargs = {
+                "num_return_sequences": 1,
+                "temperature": self.temperature,
+                "do_sample": True,
+                "hide_input": True,
+            }
+            if self.base_model.__class__.__name__ != "OllamaModel":
+                generate_kwargs["stop"] = "\n"
+            rating_response = self.base_model.generate([rating_prompt], **generate_kwargs)
             try:
                 rating = float(rating_response.text[0].strip())
             except Exception:

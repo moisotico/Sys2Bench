@@ -30,14 +30,19 @@ class GSM8KConfig(SearchConfig):
         if len(state.state_history) == self.depth_limit - 1:
             input_prompt += self.prompt["answer-prompt"]
 
-        outputs = self.base_model.generate([input_prompt],
-                              num_return_sequences=self.n_candidate,
-                              stop="\n",
-                              temperature=self.temperature,
-                              do_sample=True,
-                              hide_input=True,
-                              use_api=True,
-                              additional_prompt="CONTINUE").text
+        generate_kwargs = {
+            "num_return_sequences": self.n_candidate,
+            "temperature": self.temperature,
+            "do_sample": True,
+            "hide_input": True,
+        }
+        # Only add these if not OllamaModel
+        if self.base_model.__class__.__name__ != "OllamaModel":
+            generate_kwargs["use_api"] = True
+            generate_kwargs["additional_prompt"] = "CONTINUE"
+            generate_kwargs["stop"] = "\n"
+
+        outputs = self.base_model.generate([input_prompt], **generate_kwargs).text
 
         # Filter outputs here
         print("-------------------------------")
@@ -45,7 +50,12 @@ class GSM8KConfig(SearchConfig):
 
         if len(ret) == 0:
             input_prompt += self.prompt["answer-prompt"]
-            output = self.base_model.generate([input_prompt], temperature=self.temperature, use_api=True).text
+            fallback_kwargs = {
+                "temperature": self.temperature,
+            }
+            if self.base_model.__class__.__name__ != "OllamaModel":
+                fallback_kwargs["use_api"] = True
+            output = self.base_model.generate([input_prompt], **fallback_kwargs).text
             print(output)
             return output
         

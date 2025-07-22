@@ -26,24 +26,30 @@ class AQUAConfig(SearchConfig):
 
         outputs = []
         if len(state.state_history) == self.depth_limit - 1:
-            input_prompt += self.input_prompt["answer-prompt"]
-            outputs = self.base_model.generate([input_prompt],
-                                  num_return_sequences=self.n_candidate,
-                                  temperature=self.temperature,
-                                  do_sample=True,
-                                  hide_input=True,
-                                  use_api=True,
-                                  additional_prompt="CONTINUE").text
+            input_prompt += self.prompt["answer-prompt"]
+            generate_kwargs = dict(
+                num_return_sequences=self.n_candidate,
+                temperature=self.temperature,
+                do_sample=True,
+                hide_input=True,
+            )
+            if self.base_model.__class__.__name__ != "OllamaModel":
+                generate_kwargs["use_api"] = True
+                generate_kwargs["additional_prompt"] = "CONTINUE"
+            outputs = self.base_model.generate([input_prompt], **generate_kwargs).text
         else:
-            input_prompt += self.input_prompt["thought-prompt"]
-            outputs = self.base_model.generate([input_prompt],
-                                  num_return_sequences=self.n_candidate,
-                                  stop="\n",
-                                  temperature=self.temperature,
-                                  do_sample=True,
-                                  hide_input=True,
-                                  use_api=True,
-                                  additional_prompt="CONTINUE").text
+            input_prompt += self.prompt["thought-prompt"]
+            generate_kwargs = dict(
+                num_return_sequences=self.n_candidate,
+                temperature=self.temperature,
+                do_sample=True,
+                hide_input=True,
+            )
+            if self.base_model.__class__.__name__ != "OllamaModel":
+                generate_kwargs["use_api"] = True
+                generate_kwargs["additional_prompt"] = "CONTINUE"
+                generate_kwargs["stop"] = "\n"
+            outputs = self.base_model.generate([input_prompt], **generate_kwargs).text
 
         print("Action history: ", "".join(["  " + s for s in state.state_history]))
         # Filter outputs here

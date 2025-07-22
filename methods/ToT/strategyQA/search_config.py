@@ -28,27 +28,29 @@ class SQAConfig(SearchConfig):
         outputs = []
         if len(state.state_history) == self.depth_limit - 1:
             input_prompt += self.prompt['propose_answer_instructions']
-            outputs = self.base_model.generate([input_prompt],
-                                  num_return_sequences=self.n_candidate,
-                                  temperature=self.temperature,
-                                  do_sample=True,
-                                  hide_input=True).text
+            outputs = self.base_model.generate(
+                [input_prompt],
+                num_return_sequences=self.n_candidate,
+                temperature=self.temperature,
+                do_sample=True,
+                hide_input=True
+            ).text
         else:
             input_prompt += self.prompt['propose_action_instructions']
-        #     "\n\n Give a single action that would further the current state of the last answer. This action should be on a line by itself and should include reasoning."\
-        # " If we have enough information to select an answer, give an answer in the form of: So the answer is (yes or no)"
-            outputs = self.base_model.generate([input_prompt],
-                                  num_return_sequences=self.n_candidate,
-                                  stop=".",
-                                  temperature=self.temperature,
-                                  do_sample=True,
-                                  hide_input=True,
-                                  additional_prompt="CONTINUE").text
+            generate_kwargs = {
+                "num_return_sequences": self.n_candidate,
+                "temperature": self.temperature,
+                "do_sample": True,
+                "hide_input": True,
+            }
+            # Only add these if not OllamaModel
+            if self.base_model.__class__.__name__ != "OllamaModel":
+                generate_kwargs["stop"] = "."
+                generate_kwargs["additional_prompt"] = "CONTINUE"
+            outputs = self.base_model.generate([input_prompt], **generate_kwargs).text
 
         print("Action history: ", "".join(["  " + s for s in state.state_history]))
-        # Filter outputs here
         print("-------------------------------")
-        # deduplicate
         ret = list(dict.fromkeys(outputs))
         print("ACTIONS Outputs: with temperature  ", self.temperature,"  :  ", ret)
         return ret
@@ -59,9 +61,25 @@ class SQAConfig(SearchConfig):
         input_prompt += self.prompt['tot']
         input_prompt = input_prompt.replace("{QUESTION}", self.example)
         input_prompt += "".join(["\n" + s for s in state.state_history])
+
+        # Handle OllamaModel separately
+        if self.base_model.__class__.__name__ == "OllamaModel":
+            rating_prompt = self.prompt['rating_prompt'].replace("{input_prompt}", input_prompt).replace("{action}", action)
+            generate_kwargs = {
+                "temperature": self.temperature,
+                "do_sample": True,
+                "hide_input": True,
+            }
+            try:
+                rating_response = self.base_model.generate([rating_prompt], **generate_kwargs)
+                rating = float(rating_response.text[0].strip())
+            except Exception:
+                rating = 0
+            return rating, {'intuition': rating, 'self_eval': rating}
+
+        # Non-Ollama models
         if self.calc_reward == "sampling":   
             rating_prompt = self.prompt['rating_prompt'].replace("{input_prompt}", input_prompt).replace("{action}", action)
-          
             rating_response = self.base_model.generate([rating_prompt], temperature=self.temperature)
             try:
                 rating = float(rating_response.text[0].strip())

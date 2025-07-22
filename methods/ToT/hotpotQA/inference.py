@@ -15,7 +15,7 @@ from reasoners.lm.openai_model import OpenAIModel
 
 
 def main(
-    base_lm: Literal["hf", "openai", "api"],
+    base_lm: Literal["hf", "openai", "api", "ollama"] = "openai",
     model_dir=None,
     api_model_id="meta-llama/Meta-Llama-3.1-70B-Instruct",
     openai_model="gpt-4o-mini",
@@ -38,6 +38,9 @@ def main(
             None, None, use_api=True, model_id=api_model_id, quantized=None
         )
         model_dir = base_model.model_id
+    elif base_lm == "ollama":
+        from reasoners.lm.ollama_model import OllamaModel
+        base_model = OllamaModel(model_name="qwen3:8b", additional_prompt="NONE")
     else:
         raise ValueError(f"Unknown base_lm: {base_lm}")
     with open(prompt) as f:
