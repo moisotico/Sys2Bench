@@ -8,6 +8,7 @@ from reasoners.lm.hf_model import HFModel
 from reasoners.lm.openai_model import OpenAIModel
 from reasoners.lm.llama_api_model import LLaMaApiModel
 from reasoners.lm.ollama_model import OllamaModel
+from reasoners.lm.aws_bedrock_model import AWSBedrockModel
 
 class CoTReasoner():
     def __init__(self, base_model, temperature=0.8, sc_num = 1):
@@ -25,7 +26,7 @@ class CoTReasoner():
             do_sample = False
         if isinstance(self.base_model, OpenAIModel) or isinstance(self.base_model, LLaMaApiModel):
             eos_token_id = []
-        elif isinstance(self.base_model, OllamaModel):
+        elif isinstance(self.base_model, OllamaModel) or isinstance(self.base_model, AWSBedrockModel):
             eos_token_id = [1]
         else:
             print(self.base_model.model.__class__)
@@ -39,8 +40,8 @@ class CoTReasoner():
                 "temperature": self.temperature,
                 "eos_token_id": eos_token_id
             }
-            # Only add additional_prompt for non-Ollama models
-            if not isinstance(self.base_model, OllamaModel):
+            # Only add additional_prompt for non-Ollama and non-AWSBedrock models
+            if not isinstance(self.base_model, (OllamaModel, AWSBedrockModel)):
                 gen_kwargs["additional_prompt"] = "ANSWER"
             output = self.base_model.generate([inputs], **gen_kwargs).text[0].strip()
             outputs.append(output)
@@ -49,7 +50,7 @@ class CoTReasoner():
             
             
 
-def main(base_lm:Literal['hf', 'openai', 'api', 'ollama'] = 'openai',
+def main(base_lm:Literal['hf', 'openai', 'api', 'ollama', 'aws_bedrock'] = 'openai',
          model_dir= None, 
          prompt="prompts/aqua/prompts.json", 
          data_path="data/aqua", 
@@ -61,7 +62,9 @@ def main(base_lm:Literal['hf', 'openai', 'api', 'ollama'] = 'openai',
          api_model_id='meta-llama/Meta-Llama-3.1-8B-Instruct',
          model_name=None,
          openai_model="gpt-4o-mini",
-         log_dir=None):
+         log_dir=None,
+         aws_region="us-east-1",
+         bearer_token=None):
 
     if base_lm == "openai":
         base_model = OpenAIModel(openai_model, additional_prompt="ANSWER")
@@ -74,6 +77,13 @@ def main(base_lm:Literal['hf', 'openai', 'api', 'ollama'] = 'openai',
         if model_name is None:
             model_name = "qwen3:8b"
         base_model = OllamaModel(model_name=model_name, additional_prompt="ANSWER")
+    elif base_lm == 'aws_bedrock':
+        base_model = AWSBedrockModel(
+            model_id=model_name or "meta.llama3-1-8b-instruct-v1:0",
+            aws_region=aws_region,
+            bearer_token=bearer_token,
+            additional_prompt="ANSWER"
+        )
     else:
         raise ValueError(f"base_lm {base_lm} is not supported")
     with open(prompt) as f:

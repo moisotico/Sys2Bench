@@ -9,6 +9,7 @@ from reasoners.lm.hf_model import HFModel
 from reasoners.lm.llama_api_model import LLaMaApiModel
 from reasoners.lm.openai_model import OpenAIModel
 from reasoners.lm.ollama_model import OllamaModel
+from reasoners.lm.aws_bedrock_model import AWSBedrockModel
 
 
 class CoTReasoner:
@@ -31,7 +32,7 @@ class CoTReasoner:
             do_sample = False
         if isinstance(self.base_model, OpenAIModel) or isinstance(self.base_model, LLaMaApiModel):
             eos_token_id = []
-        elif isinstance(self.base_model, OllamaModel):
+        elif isinstance(self.base_model, OllamaModel) or isinstance(self.base_model, AWSBedrockModel):
             eos_token_id = [1]
         else:
             eos_token_id = [13]
@@ -43,8 +44,8 @@ class CoTReasoner:
                 "temperature": self.temperature,
                 "eos_token_id": eos_token_id,
             }
-            # Only pass additional_prompt if not OllamaModel
-            if not isinstance(self.base_model, OllamaModel):
+            # Only pass additional_prompt if not OllamaModel or AWSBedrockModel
+            if not isinstance(self.base_model, (OllamaModel, AWSBedrockModel)):
                 gen_kwargs["additional_prompt"] = "ANSWER"
             outputs += self.base_model.generate(
                 [inputs] * local_bs,
@@ -57,7 +58,7 @@ class CoTReasoner:
 
 
 def main(
-    base_lm: Literal["hf", "openai", "api", "ollama"] = "openai",
+    base_lm: Literal["hf", "openai", "api", "ollama", "aws_bedrock"] = "openai",
     model_dir=None,
     api_model_id="meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
     openai_model="gpt-4o-mini",
@@ -69,6 +70,8 @@ def main(
     n_sc=5,
     quantized="int8",
     model_name=None,
+    aws_region="us-east-1",
+    bearer_token=None,
 ):
     if base_lm == "openai":
         base_model = OpenAIModel(openai_model, additional_prompt="ANSWER")
@@ -86,6 +89,13 @@ def main(
         model_dir = base_model.model_id
     elif base_lm == "ollama":
         base_model = OllamaModel(model_name=model_name or "qwen3:8b", additional_prompt=None)
+    elif base_lm == "aws_bedrock":
+        base_model = AWSBedrockModel(
+            model_id=model_name or "meta.llama3-1-8b-instruct-v1:0",
+            aws_region=aws_region,
+            bearer_token=bearer_token,
+            additional_prompt="ANSWER"
+        )
     else:
         raise ValueError(f"Unknown base_lm: {base_lm}")
     with open(prompt) as f:

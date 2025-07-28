@@ -30,7 +30,7 @@ class CoTReasoner():
             do_sample = False
         if isinstance(self.base_model, OpenAIModel) or isinstance(self.base_model, LLaMaApiModel):
             eos_token_id = []
-        elif isinstance(self.base_model, OllamaModel):
+        elif isinstance(self.base_model, OllamaModel) or isinstance(self.base_model, AWSBedrockClient):
             eos_token_id = [1]
         else:
             assert isinstance(self.base_model.model, transformers.LlamaForCausalLM)

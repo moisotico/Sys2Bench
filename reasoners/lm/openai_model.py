@@ -56,8 +56,8 @@ class OpenAIModel(LanguageModel):
             prompt = prompt[0]
         if additional_prompt is None and self.additional_prompt is not None:
             additional_prompt = self.additional_prompt
-        elif additional_prompt is not None and self.additional_prompt is not None:
-            print("Warning: additional_prompt set in constructor is overridden.")
+        # elif additional_prompt is not None and self.additional_prompt is not None:
+            # print("Warning: additional_prompt set in constructor is overridden.")
         
         
         #if custom_prompt_template != "":
